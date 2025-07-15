@@ -104,6 +104,7 @@ from TRELLIS.trellis.utils import postprocessing_utils
 from TripoSG.pipelines.pipeline_triposg import TripoSGPipeline
 from TripoSG.pipelines.pipeline_triposg_scribble import TripoSGScribblePipeline
 from Stable3DGen.pipeline_builders import StableGenPipelineBuilder
+from Step1X3D.step1x3d_geometry.models.pipelines.pipeline import Step1X3DGeometryPipeline
 from MV_Adapter.mvadapter_node_utils import (
         prepare_pipeline as mvadapter_prepare_pipeline,
         run_pipeline as mvadapter_run_pipeline, 
@@ -5179,3 +5180,82 @@ class MVAdapter_Texture_Projection:
                 os.remove(temp_grid_path)
             raise e
 
+class Load_Step1X3D_Geometry_Pipeline:
+    default_repo_id = "stepfun-ai/Step1X-3D"
+    default_subfolder = "Step1X-3D-Geometry-1300m"
+
+    CATEGORY     = "Comfy3D/Import|Export"
+    RETURN_TYPES = ("Step1X3D_GEOMETRY_PIPE",)
+    RETURN_NAMES = ("step1x3d_geometry_pipe",)
+    FUNCTION     = "load_pipe"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "repo_id": ("STRING", {"default": cls.default_repo_id, "multiline": False}),
+                "subfolder": ("STRING", {"default": cls.default_subfolder, "multiline": False}),
+            }
+        }
+
+    @classmethod
+    def load_pipe(self, repo_id, subfolder):
+        pipe = Step1X3DGeometryPipeline.from_pretrained(repo_id, subfolder=subfolder).to(DEVICE)
+        return (pipe,)
+
+class Step1X3D_Geometry_Image_To_3D:
+    """
+    3D generation pipeline using Step1X-3D model.
+    """
+
+    CATEGORY = "Comfy3D/Algorithm"
+    RETURN_TYPES = ("MESH",)
+    RETURN_NAMES = ("mesh",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "step1x3d_geometry_pipe": ("Step1X3D_GEOMETRY_PIPE",),
+                "images": ("IMAGE",),
+                "seed": ("INT", {"default": 1234, "min": 0, "max": 0xffffffffffffffff}),
+                "guidance_scale": ("FLOAT", {"default": 7.5, "min": 0.0, "step": 0.1}),
+                "num_inference_steps": ("INT", {"default": 50, "min": 1}),
+            }
+        }
+
+    @torch.no_grad()
+    def run(
+        self,
+        step1x3d_geometry_pipe,
+        images,
+        seed=1234,
+        guidance_scale=7.5,
+        num_inference_steps=50,
+        return_dict=False
+    ):
+        
+        single_image = torch_imgs_to_pils(images)[0]
+        generator = torch.Generator(device=step1x3d_geometry_pipe.device).manual_seed(seed)
+        output = step1x3d_geometry_pipe(single_image, guidance_scale=guidance_scale, num_inference_steps=num_inference_steps, output_type="trimesh")
+
+        try:
+            mesh_output = output.mesh[0]
+
+            # Convert to batched PyTorch tensors
+            batched_vertices = torch.from_numpy(mesh_output.vertices).unsqueeze(0)  # shape: [1, V, 3]
+            batched_faces = torch.from_numpy(mesh_output.faces).unsqueeze(0)        # shape: [1, F, 3]
+
+            # Return as object with .vertices and .faces attributes
+            class MeshBatch:
+                def __init__(self, vertices, faces):
+                    self.vertices = vertices
+                    self.faces = faces
+
+            batched_mesh = MeshBatch(vertices=batched_vertices, faces=batched_faces)
+
+            return (batched_mesh,)
+
+        except Exception as e:
+            raise Exception(f"[Step1X3D_Geometry_Image_To_3D] 3D generation failed: {str(e)}")
