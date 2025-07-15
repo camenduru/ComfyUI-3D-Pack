@@ -43,9 +43,16 @@ Your ComfyUI Root Directory\python_embeded\python.exe install.py
 
 
 ## Features:
-- For use cases please check out [Example Workflows](./_Example_Workflows/). [**Last update: 5/June/2025**]
+- For use cases please check out [Example Workflows](./_Example_Workflows/). [**Last update: 15/July/2025**]
   - **Note:** you need to put [Example Inputs Files & Folders](_Example_Workflows/_Example_Inputs_Files/) under ComfyUI Root Directory\ComfyUI\input folder before you can run the example workflow
 
+- **Step1X-3D**: [stepfun-ai/Step1X-3D](https://github.com/stepfun-ai/Step1X-3D)
+  - Step1X3D Geometry: Single image to 3D Mesh
+  - Model weights: https://huggingface.co/stepfun-ai/Step1X-3D/tree/main/Step1X-3D-Geometry-1300m
+  - [Workflow](./_Example_Workflows/Step1X3D_Geometry_Image_To_3D.json)
+    
+    <video controls autoplay loop src="https://github.com/user-attachments/assets/2e2c5121-8782-4101-bc7b-5ccd07932c84"></video>
+    
 - **MV-Adapter**: [huanngzh/MV-Adapter](https://github.com/huanngzh/MV-Adapter)
   - Two generation methods:
     - IG2MV: Single image + 3D mesh to multi-view images
