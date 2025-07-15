@@ -1,0 +1,220 @@
+{
+  "id": "e7d35c6d-c1bf-4f60-9b88-7dc8e70a7b70",
+  "revision": 0,
+  "last_node_id": 21,
+  "last_link_id": 24,
+  "nodes": [
+    {
+      "id": 15,
+      "type": "[Comfy3D] Load Step1X3D Geometry Pipeline",
+      "pos": [
+        1995.490234375,
+        -1290.209228515625
+      ],
+      "size": [
+        317.8091735839844,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "step1x3d_geometry_pipe",
+          "type": "Step1X3D_GEOMETRY_PIPE",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-3D-Pack",
+        "ver": "50f293d84126cfefe69c1dfb9246fdcef3010295",
+        "Node name for S&R": "[Comfy3D] Load Step1X3D Geometry Pipeline"
+      },
+      "widgets_values": [
+        "stepfun-ai/Step1X-3D",
+        "Step1X-3D-Geometry-1300m"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "LoadImage",
+      "pos": [
+        1993.715087890625,
+        -1082.22119140625
+      ],
+      "size": [
+        274.080078125,
+        314
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            21
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "000.png",
+        "image"
+      ]
+    },
+    {
+      "id": 19,
+      "type": "[Comfy3D] Step1X3D Geometry Image To 3D",
+      "pos": [
+        2402.49951171875,
+        -1302.2076416015625
+      ],
+      "size": [
+        312.3335876464844,
+        150
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "step1x3d_geometry_pipe",
+          "type": "Step1X3D_GEOMETRY_PIPE",
+          "link": 20
+        },
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-3D-Pack",
+        "ver": "50f293d84126cfefe69c1dfb9246fdcef3010295",
+        "Node name for S&R": "[Comfy3D] Step1X3D Geometry Image To 3D"
+      },
+      "widgets_values": [
+        258271456996664,
+        "randomize",
+        7.5,
+        50
+      ]
+    },
+    {
+      "id": 21,
+      "type": "SaveGLB",
+      "pos": [
+        2766.419921875,
+        -1286.8046875
+      ],
+      "size": [
+        669.5238037109375,
+        727.1428833007812
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "link": 24
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.44",
+        "Camera Info": {
+          "position": {
+            "x": -1.0597923322752745,
+            "y": 3.215456035593139,
+            "z": 10.625986890305972
+          },
+          "target": {
+            "x": -0.037225462024513906,
+            "y": 1.978821649426972,
+            "z": 0.03606042215748123
+          },
+          "zoom": 1,
+          "cameraType": "perspective"
+        }
+      },
+      "widgets_values": [
+        "mesh/ComfyUI",
+        ""
+      ]
+    }
+  ],
+  "links": [
+    [
+      20,
+      15,
+      0,
+      19,
+      0,
+      "Step1X3D_GEOMETRY_PIPE"
+    ],
+    [
+      21,
+      5,
+      0,
+      19,
+      1,
+      "IMAGE"
+    ],
+    [
+      24,
+      19,
+      0,
+      21,
+      0,
+      "MESH"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.2705000000000042,
+      "offset": [
+        -1787.083436970981,
+        1434.7210700430153
+      ]
+    },
+    "frontendVersion": "1.24.1",
+    "node_versions": {
+      "ComfyUI-3D-Pack": "a1ce74e056c61e3e3eb3d927232b5f93bd3980e3",
+      "comfy-core": "0.3.35"
+    },
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
