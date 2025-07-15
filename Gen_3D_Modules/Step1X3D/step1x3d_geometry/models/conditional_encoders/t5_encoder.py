@@ -4,7 +4,7 @@ from torch import nn
 import numpy as np
 import re
 import urllib.parse as ul
-from bs4 import BeautifulSoup
+import html
 from einops import rearrange
 from dataclasses import dataclass
 from torchvision import transforms
@@ -132,7 +132,8 @@ class T5Encoder(BaseCaptionEncoder, ModelMixin):
             caption,
         )  # regex for urls
         # html:
-        caption = BeautifulSoup(caption, features="html.parser").text
+        caption = re.sub(r"<[^>]+>", "", caption)
+        caption = html.unescape(caption)
 
         # @<nickname>
         caption = re.sub(r"@[\w\d]+\b", "", caption)

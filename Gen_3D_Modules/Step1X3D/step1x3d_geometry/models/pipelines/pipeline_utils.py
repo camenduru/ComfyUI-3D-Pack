@@ -16,37 +16,48 @@ def preprocess_image(
     force: bool = False,
     background_color: List[int] = [255, 255, 255],
     foreground_ratio: float = 0.9,
-    rembg_backend: str = "bria",
+    rembg_backend: str = "bria-rmbg",
     **rembg_kwargs,
 ):
     r"""
-    Crop and remote the background of the input image
+    Crop and remove the background of the input image.
+
     Args:
-        image_pil (`List[PIL.Image.Image]`):
-            List of `PIL.Image.Image` objects representing the input image.
-        force (`bool`, *optional*, defaults to `False`):
-            Whether to force remove the background even if the image has an alpha channel.
+        images_pil (`List[PIL.Image.Image]` or `PIL.Image.Image`):
+            List of `PIL.Image.Image` objects or a single image representing the input.
+        force (`bool`, optional, default=False):
+            Whether to force background removal even if the image has an alpha channel.
+        background_color (`List[int]`, optional, default=[255, 255, 255]):
+            Background color to composite with.
+        foreground_ratio (`float`, optional, default=0.9):
+            Ratio of the image foreground in the final crop.
+        rembg_backend (`str`, optional, default="bria-rmbg"):
+            Backend for rembg session. "default" or "bria-rmbg".
+
     Returns:
-        `List[PIL.Image.Image]`: List of `PIL.Image.Image` objects representing the preprocessed image.
+        `List[PIL.Image.Image]` or `PIL.Image.Image`: Preprocessed image(s).
     """
-    is_single_image = False
+
     if isinstance(images_pil, PIL.Image.Image):
         images_pil = [images_pil]
         is_single_image = True
+    else:
+        is_single_image = False
+
     preprocessed_images = []
-    for i in range(len(images_pil)):
-        image = images_pil[i]
-        width, height, size = image.width, image.height, image.size
-        do_remove = True
+
+    for image in images_pil:
+        width, height = image.size
+        do_remove = force
+
         if image.mode == "RGBA" and image.getextrema()[3][0] < 255:
-            # explain why current do not rm bg
-            print(
-                "alhpa channl not empty, skip remove background, using alpha channel as mask"
-            )
+            print("Alpha channel not empty, skipping background removal, using alpha as mask.")
             do_remove = False
-        do_remove = do_remove or force
+
         if do_remove:
-            import rembg  # lazy import
+            print("Removing background...")
+
+            import rembg  # Lazy import
 
             if rembg_backend == "default":
                 image = rembg.remove(image, **rembg_kwargs)
@@ -54,7 +65,7 @@ def preprocess_image(
                 image = rembg.remove(
                     image,
                     session=rembg.new_session(
-                        model_name="bria",
+                        model_name="bria-rmbg",
                         providers=[
                             (
                                 "CUDAExecutionProvider",
@@ -71,52 +82,56 @@ def preprocess_image(
                     **rembg_kwargs,
                 )
 
-        # calculate the min bbox of the image
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+
         alpha = image.split()[-1]
-        bboxs = alpha.getbbox()
-        x1, y1, x2, y2 = bboxs
+        bbox = alpha.getbbox()
+        if not bbox:
+            raise ValueError("Could not find bounding box of the foreground in the alpha channel.")
+
+        x1, y1, x2, y2 = bbox
         dy, dx = y2 - y1, x2 - x1
         s = min(height * foreground_ratio / dy, width * foreground_ratio / dx)
         Ht, Wt = int(dy * s), int(dx * s)
 
+        # Composite image over background of the same size
         background = PIL.Image.new("RGBA", image.size, (*background_color, 255))
         image = PIL.Image.alpha_composite(background, image)
-        image = image.crop(alpha.getbbox())
-        alpha = alpha.crop(alpha.getbbox())
 
-        # Calculate the new size after rescaling
-        new_size = tuple(int(dim * foreground_ratio) for dim in size)
-        # Resize the image while maintaining the aspect ratio
-        resized_image = image.resize((Wt, Ht))
-        resized_alpha = alpha.resize((Wt, Ht))
-        # Create a new image with the original size and white background
-        padded_image = PIL.Image.new("RGB", size, tuple(background_color))
-        padded_alpha = PIL.Image.new("L", size, (0))
-        paste_position = (
-            (width - resized_image.width) // 2,
-            (height - resized_image.height) // 2,
-        )
+        # Crop to bounding box
+        image = image.crop(bbox)
+        alpha = alpha.crop(bbox)
+
+        # Resize image and alpha
+        resized_image = image.resize((Wt, Ht), PIL.Image.LANCZOS)
+        resized_alpha = alpha.resize((Wt, Ht), PIL.Image.LANCZOS)
+
+        # Pad image back to original size
+        padded_image = PIL.Image.new("RGB", (width, height), tuple(background_color))
+        padded_alpha = PIL.Image.new("L", (width, height), 0)
+
+        paste_position = ((width - Wt) // 2, (height - Ht) // 2)
         padded_image.paste(resized_image, paste_position)
         padded_alpha.paste(resized_alpha, paste_position)
 
-        # expand image to 1:1
-        width, height = padded_image.size
-        if width == height:
+        # Make square if needed
+        if width != height:
+            new_size = max(width, height)
+            square_image = PIL.Image.new("RGB", (new_size, new_size), tuple(background_color))
+            square_alpha = PIL.Image.new("L", (new_size, new_size), 0)
+            paste_position = ((new_size - width) // 2, (new_size - height) // 2)
+            square_image.paste(padded_image, paste_position)
+            square_alpha.paste(padded_alpha, paste_position)
+            final_image = square_image
+            final_image.putalpha(square_alpha)
+        else:
             padded_image.putalpha(padded_alpha)
-            preprocessed_images.append(padded_image)
-            continue
-        new_size = (max(width, height), max(width, height))
-        new_image = PIL.Image.new("RGB", new_size, tuple(background_color))
-        new_alpha = PIL.Image.new("L", new_size, (0))
-        paste_position = ((new_size[0] - width) // 2, (new_size[1] - height) // 2)
-        new_image.paste(padded_image, paste_position)
-        new_alpha.paste(padded_alpha, paste_position)
-        new_image.putalpha(new_alpha)
-        preprocessed_images.append(new_image)
+            final_image = padded_image
 
-    if is_single_image:
-        return preprocessed_images[0]
-    return preprocessed_images
+        preprocessed_images.append(final_image)
+
+    return preprocessed_images[0] if is_single_image else preprocessed_images
 
 
 def load_mesh(path):

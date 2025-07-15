@@ -5222,6 +5222,7 @@ class Step1X3D_Geometry_Image_To_3D:
                 "seed": ("INT", {"default": 1234, "min": 0, "max": 0xffffffffffffffff}),
                 "guidance_scale": ("FLOAT", {"default": 7.5, "min": 0.0, "step": 0.1}),
                 "num_inference_steps": ("INT", {"default": 50, "min": 1}),
+                "remove_background": ("BOOLEAN", {"default": False},),
             }
         }
 
@@ -5233,12 +5234,13 @@ class Step1X3D_Geometry_Image_To_3D:
         seed=1234,
         guidance_scale=7.5,
         num_inference_steps=50,
+        remove_background=False,
         return_dict=False
     ):
         
         single_image = torch_imgs_to_pils(images)[0]
         generator = torch.Generator(device=step1x3d_geometry_pipe.device).manual_seed(seed)
-        output = step1x3d_geometry_pipe(single_image, guidance_scale=guidance_scale, num_inference_steps=num_inference_steps, output_type="trimesh")
+        output = step1x3d_geometry_pipe(single_image, guidance_scale=guidance_scale, num_inference_steps=num_inference_steps, force_remove_background=remove_background, output_type="trimesh")
 
         try:
             mesh_output = output.mesh[0]
