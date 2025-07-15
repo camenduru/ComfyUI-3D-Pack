@@ -5222,7 +5222,7 @@ class Step1X3D_Geometry_Image_To_3D:
                 "seed": ("INT", {"default": 1234, "min": 0, "max": 0xffffffffffffffff}),
                 "guidance_scale": ("FLOAT", {"default": 7.5, "min": 0.0, "step": 0.1}),
                 "num_inference_steps": ("INT", {"default": 50, "min": 1}),
-                "remove_background": ("BOOLEAN", {"default": False},),
+                "remove_background": ("BOOLEAN", {"default": True},),
             }
         }
 
@@ -5234,7 +5234,7 @@ class Step1X3D_Geometry_Image_To_3D:
         seed=1234,
         guidance_scale=7.5,
         num_inference_steps=50,
-        remove_background=False,
+        remove_background=True,
         return_dict=False
     ):
         
