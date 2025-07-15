@@ -1,8 +1,8 @@
 {
   "id": "e7d35c6d-c1bf-4f60-9b88-7dc8e70a7b70",
   "revision": 0,
-  "last_node_id": 21,
-  "last_link_id": 24,
+  "last_node_id": 22,
+  "last_link_id": 27,
   "nodes": [
     {
       "id": 15,
@@ -24,7 +24,7 @@
           "name": "step1x3d_geometry_pipe",
           "type": "Step1X3D_GEOMETRY_PIPE",
           "links": [
-            20
+            25
           ]
         }
       ],
@@ -58,7 +58,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            21
+            26
           ]
         },
         {
@@ -78,62 +78,15 @@
       ]
     },
     {
-      "id": 19,
-      "type": "[Comfy3D] Step1X3D Geometry Image To 3D",
-      "pos": [
-        2402.49951171875,
-        -1302.2076416015625
-      ],
-      "size": [
-        312.3335876464844,
-        150
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "step1x3d_geometry_pipe",
-          "type": "Step1X3D_GEOMETRY_PIPE",
-          "link": 20
-        },
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 21
-        }
-      ],
-      "outputs": [
-        {
-          "name": "mesh",
-          "type": "MESH",
-          "links": [
-            24
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUI-3D-Pack",
-        "ver": "50f293d84126cfefe69c1dfb9246fdcef3010295",
-        "Node name for S&R": "[Comfy3D] Step1X3D Geometry Image To 3D"
-      },
-      "widgets_values": [
-        258271456996664,
-        "randomize",
-        7.5,
-        50
-      ]
-    },
-    {
       "id": 21,
       "type": "SaveGLB",
       "pos": [
-        2766.419921875,
-        -1286.8046875
+        2771.181884765625,
+        -1307.7572021484375
       ],
       "size": [
-        669.5238037109375,
-        727.1428833007812
+        505.07940673828125,
+        518.2539672851562
       ],
       "flags": {},
       "order": 3,
@@ -142,7 +95,7 @@
         {
           "name": "mesh",
           "type": "MESH",
-          "link": 24
+          "link": 27
         }
       ],
       "outputs": [],
@@ -151,14 +104,14 @@
         "ver": "0.3.44",
         "Camera Info": {
           "position": {
-            "x": -1.0597923322752745,
-            "y": 3.215456035593139,
-            "z": 10.625986890305972
+            "x": 12.615611665858848,
+            "y": 5.928687764047149,
+            "z": 8.163485440293865
           },
           "target": {
-            "x": -0.037225462024513906,
-            "y": 1.978821649426972,
-            "z": 0.03606042215748123
+            "x": 0,
+            "y": 2.116779451593504,
+            "z": 0
           },
           "zoom": 1,
           "cameraType": "perspective"
@@ -168,28 +121,76 @@
         "mesh/ComfyUI",
         ""
       ]
+    },
+    {
+      "id": 22,
+      "type": "[Comfy3D] Step1X3D Geometry Image To 3D",
+      "pos": [
+        2402.49951171875,
+        -1302.2076416015625
+      ],
+      "size": [
+        312.3335876464844,
+        174
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "step1x3d_geometry_pipe",
+          "type": "Step1X3D_GEOMETRY_PIPE",
+          "link": 25
+        },
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 26
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mesh",
+          "type": "MESH",
+          "links": [
+            27
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-3D-Pack",
+        "ver": "50f293d84126cfefe69c1dfb9246fdcef3010295",
+        "Node name for S&R": "[Comfy3D] Step1X3D Geometry Image To 3D"
+      },
+      "widgets_values": [
+        1234,
+        "randomize",
+        7.5,
+        50,
+        true
+      ]
     }
   ],
   "links": [
     [
-      20,
+      25,
       15,
       0,
-      19,
+      22,
       0,
       "Step1X3D_GEOMETRY_PIPE"
     ],
     [
-      21,
+      26,
       5,
       0,
-      19,
+      22,
       1,
       "IMAGE"
     ],
     [
-      24,
-      19,
+      27,
+      22,
       0,
       21,
       0,
@@ -200,10 +201,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 1.2705000000000042,
+      "scale": 0.9545454545454576,
       "offset": [
-        -1787.083436970981,
-        1434.7210700430153
+        -1721.2237890061963,
+        1446.722901626145
       ]
     },
     "frontendVersion": "1.24.1",
