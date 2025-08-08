@@ -128,7 +128,8 @@ from Gen_3D_Modules.PartCrafter.partcrafter_src.pipelines.pipeline_partcrafter i
 from Gen_3D_Modules.PartCrafter.partcrafter_src.utils.data_utils import get_colored_mesh_composition
 from Gen_3D_Modules.PartCrafter.partcrafter_src.utils.render_utils import explode_mesh
 import zipfile
-
+import subprocess, shutil
+from pathlib import Path
 
 os.environ['SPCONV_ALGO'] = 'native'
 
@@ -5889,7 +5890,7 @@ class PartCrafter_Generate:
             rmbg_worker = BackgroundRemover_2_1()
             if pil_image.mode == "RGBA":
                 pil_image = pil_image.convert('RGB')
-            pil_image = rmbg_worker(pil_image, background_color=(255, 255, 255))
+            pil_image = rmbg_worker(pil_image)
             del rmbg_worker
         
         # Set sampling version
@@ -5995,3 +5996,148 @@ class PartCrafter_Generate:
         
         return (zip_path, relative_scene_path, processed_image_tensor)
 
+class PartCrafter_Generate_Api:
+    """PartCrafter Generation - Creates merged GLB 3D scene with colored components"""
+    
+    CATEGORY = "Comfy3D/Algorithm/PartCrafter"
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("glb_mesh_path",)
+
+    FUNCTION = "generate"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "partcrafter_pipe": ("DIFFUSERS_PIPE",),
+                "image": ("IMAGE",),
+                "num_parts": ("INT", {"default": 4, "min": 1, "max": 16}),
+                "seed": ("INT", {"default": 1234, "min": 0, "max": 0xffffffffffffffff}),
+                "num_tokens": ("INT", {"default": 1024, "min": 256, "max": 2048}),
+                "num_inference_steps": ("INT", {"default": 50, "min": 1, "max": 100}),
+                "guidance_scale": ("FLOAT", {"default": 7.0, "min": 0.0, "step": 0.1}),
+                "max_num_expanded_coords": ("INT", {"default": 1000000000, "min": 1000, "max": 10000000000}),
+                "use_flash_decoder": ("BOOLEAN", {"default": False}),
+                "remove_background": ("BOOLEAN", {"default": True}),
+                "sampling_version": ("INT", {"default": 1, "min": 1, "max": 2}),
+                "scene_filename": ("STRING", {"default": ""})
+            },
+            "optional": {
+                "enable_mesh_compression": ("BOOLEAN", {"default": True}),
+                "reduction_ratio": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 1.0, "step": 0.01})
+            }
+        }
+    
+    def compress_glb_with_draco(
+            self,
+            input_path: str,
+            transcoder: str = "/workspace/ComfyUI/custom_nodes/ComfyUI-3D-Pack/Gen_3D_Modules/draco/build/draco_transcoder",
+            compression_level: int = 6,
+            quant_pos_bits: int = 12,
+    ) -> str:
+        """
+        Compress GLB with Draco
+        """
+        if not (Path(transcoder).is_file() and os.access(transcoder, os.X_OK)):
+            raise FileNotFoundError(f"draco_transcoder not found or not executable at {transcoder}")
+
+        # input_path = Path(input_path)
+        # output_path = input_path.with_name(input_path.stem + "_small.glb")
+        output_path = input_path 
+
+        cmd = [
+            transcoder,
+            "-i", str(input_path),
+            "-o", str(output_path),
+            "-cl", str(compression_level),
+            "-qp", str(quant_pos_bits)
+        ]
+        print("[Draco] run:", " ".join(cmd))
+        subprocess.run(cmd, check=True)
+        return str(output_path)
+
+    @torch.no_grad()
+    def generate(self, partcrafter_pipe, image, num_parts, seed, num_tokens, num_inference_steps, 
+                guidance_scale, max_num_expanded_coords, use_flash_decoder, remove_background, 
+                sampling_version, scene_filename, enable_mesh_compression=True, reduction_ratio=1.0):
+
+        try:
+            pil_image = torch_imgs_to_pils(image)[0]
+
+            if remove_background:
+                rmbg_worker = BackgroundRemover_2_1()
+                if pil_image.mode == "RGBA":
+                    pil_image = pil_image.convert('RGB')
+                pil_image = rmbg_worker(pil_image, background_color=(255, 255, 255))
+                del rmbg_worker
+
+            if hasattr(partcrafter_pipe.vae, 'set_sampling_version'):
+                partcrafter_pipe.vae.set_sampling_version(sampling_version)
+
+            generator = torch.Generator(device=partcrafter_pipe.device)
+            generator.manual_seed(int(seed))
+
+            outputs = partcrafter_pipe(
+                image=[pil_image] * num_parts,
+                attention_kwargs={"num_parts": num_parts},
+                num_tokens=num_tokens,
+                generator=generator,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                max_num_expanded_coords=max_num_expanded_coords,
+                use_flash_decoder=use_flash_decoder,
+            ).meshes
+
+            for i, mesh in enumerate(outputs):
+                if mesh is None:
+                    outputs[i] = trimesh.Trimesh(vertices=[[0,0,0]], faces=[[0,0,0]])
+
+            # Apply mesh compression if enabled
+            if enable_mesh_compression and reduction_ratio < 1.0:
+                for i, mesh in enumerate(outputs):
+                    if mesh is not None and len(mesh.faces) > 0:
+                        orig_face_count = len(mesh.faces)
+                        target_faces = int(orig_face_count * reduction_ratio)
+                        if target_faces > 0:
+                            vertices, faces = decimate_mesh(
+                                mesh.vertices, 
+                                mesh.faces, 
+                                target=target_faces, 
+                                remesh=False, 
+                                optimalplacement=True
+                            )
+                            outputs[i] = trimesh.Trimesh(vertices=vertices, faces=faces)
+
+            merged_mesh = get_colored_mesh_composition(outputs)
+            scene_output_dir = "output/partcrafter_scenes"
+            os.makedirs(scene_output_dir, exist_ok=True)
+
+            if scene_filename.strip() == "":
+                import time
+                timestamp = int(time.time() * 1000)
+                scene_filename = f"scene_{timestamp}.glb"
+            elif not scene_filename.lower().endswith(".glb"):
+                scene_filename += ".glb"
+
+            scene_file_path = os.path.join(scene_output_dir, scene_filename)
+            merged_mesh.export(scene_file_path)
+
+            if enable_mesh_compression:
+                try:
+                    scene_file_path = self.compress_glb_with_draco(scene_file_path)
+                    # Обновляем имя файла для возврата сжатого файла
+                    scene_filename = os.path.basename(scene_file_path)
+                    print("Draco compression successful")
+                except Exception as err:
+                    print("[PartCrafter] Draco compression failed – using original GLB:", err)
+
+            relative_scene_path = f"partcrafter_scenes/{scene_filename}"
+            print(f"[PartCrafter] Saved GLB: {relative_scene_path}")
+
+            return (relative_scene_path,)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[PartCrafter ERROR] {e}")
+            return ("error",)  

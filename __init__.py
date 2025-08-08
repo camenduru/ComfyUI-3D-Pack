@@ -17,7 +17,7 @@ import shutil
 import __main__
 import importlib
 import inspect
-from .webserver.server import server, set_web_conf
+# from .webserver.server import server, set_web_conf
 from .shared_utils.log_utils import setup_logger
 
 # Common formatter for simplicity, adjust as needed
@@ -39,7 +39,7 @@ conf_text = f.read()
 f.close()
 sys_conf = ConfigFactory.parse_string(conf_text)
 
-set_web_conf(sys_conf['web'])
+# set_web_conf(sys_conf['web'])
 
 # Log into huggingface if given user specificed token
 hf_token = sys_conf['huggingface.token']
@@ -66,12 +66,12 @@ WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
 # # Cleanup old extension folder
-folder_web = os.path.join(os.path.dirname(os.path.realpath(__main__.__file__)), "web")
-extensions_folder = os.path.join(folder_web, 'extensions', 'ComfyUI-3D-Pack')
+# folder_web = os.path.join(os.path.dirname(os.path.realpath(__main__.__file__)), "web")
+# extensions_folder = os.path.join(folder_web, 'extensions', 'ComfyUI-3D-Pack')
 
-def cleanup():
-    if os.path.exists(extensions_folder):
-        shutil.rmtree(extensions_folder)
-        print('\033[34mComfy3D: \033[92mRemoved old extension folder\033[0m')
+# def cleanup():
+#     if os.path.exists(extensions_folder):
+#         shutil.rmtree(extensions_folder)
+#         print('\033[34mComfy3D: \033[92mRemoved old extension folder\033[0m')
 
-cleanup()
+# cleanup()
